@@ -1,1 +1,9 @@
 @import "tailwindcss";
+/* 🌱 KhetKart Theme */
+@theme {
+  --color-primary: #166534;     /* deep green */
+  --color-secondary: #22c55e;   /* leaf green */
+  --color-accent: #facc15;      /* yellow */
+  --color-bg: #f0fdf4;          /* light green background */
+  --color-text-gray: #1f2937;        /* dark gray */
+}
