@@ -8,6 +8,8 @@ import Products from "./pages/Products";
 import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import FarmerDashboard from "./pages/FarmerDashboard";
+import OrderHistory from "./pages/OrderHistory";
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/seller-dashboard" element={<FarmerDashboard />} />
+          <Route path="/orders" element={<OrderHistory />} />
         </Routes>
         <Footer />
       </AuthProvider>

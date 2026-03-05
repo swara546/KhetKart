@@ -1,65 +1,38 @@
 // models/Product.js
-// Defines what a "Product" document looks like in MongoDB
-
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Product name is required"],
+      required: [true, "Crop name is required"],
       trim: true,
     },
-    description: {
-      type: String,
-      default: "",
-    },
+    description: { type: String, default: "" },
     price: {
       type: Number,
-      required: [true, "Price is required"],
+      required: [true, "Price per unit is required"],
       min: [0, "Price cannot be negative"],
     },
     unit: {
       type: String,
-      default: "unit",   // e.g. kg, pack, piece, 1L
+      default: "kg",          // most crops sold per kg
     },
     category: {
       type: String,
       required: true,
-      enum: ["Seeds", "Fertilizers", "Tools", "Pesticides"],
+      enum: ["Grains", "Vegetables", "Fruits", "Pulses"],
     },
-    image: {
-      type: String,
-      default: "",       // URL of product image (optional)
-    },
-    stock: {
-      type: Number,
-      default: 0,
-    },
-    rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
-    },
-    brand: {
-      type: String,
-      default: "",
-    },
-    // which seller added this product
-    seller: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",       // links to the User model
-      required: true,
-    },
-    sellerName: {
-      type: String,      // store seller name directly for easy display
-      default: "",
-    },
+    image:    { type: String, default: "" },
+    stock:    { type: Number, default: 0 },   // quantity available in kg/unit
+    minOrder: { type: Number, default: 1 },   // minimum order quantity
+    rating:   { type: Number, default: 0, min: 0, max: 5 },
+
+    // The farmer who listed this crop
+    seller:     { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    sellerName: { type: String, default: "" },  // farmer's name for quick display
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Product", productSchema);
