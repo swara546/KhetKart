@@ -1,5 +1,6 @@
 // src/pages/Products.jsx
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "../api/axios";
 import { MdSearch, MdClose, MdShoppingCart, MdFilterList, MdStar, MdLocationOn } from "react-icons/md";
 import { FaSort } from "react-icons/fa";
@@ -190,6 +191,7 @@ function ProductModal({ product, onClose, onAddToCart }) {
 
 // ── Main Page ────────────────────────────────────────────────────
 function Products() {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState("");
@@ -198,6 +200,13 @@ function Products() {
   const [sort, setSort]         = useState("default");
   const [selected, setSelected] = useState(null);
   const [toast, setToast]       = useState("");
+
+  // Read category from URL param whenever it changes
+  useEffect(() => {
+    const cat = searchParams.get("category");
+    if (cat) setCategory(cat);
+    else setCategory("All");
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchProducts = async () => {
