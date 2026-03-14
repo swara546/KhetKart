@@ -1,64 +1,97 @@
 // routes/ai.js
-// POST /api/ai/chat — farming assistant powered by Google Gemini (free)
+// POST /api/ai/chat — farming assistant powered by Groq (free)
 
 const express = require("express");
 const router  = express.Router();
 
+const FARMER_PROMPT = `You are KhetBot, a friendly farming assistant for KhetKart — India's direct farm-to-vendor marketplace.
+
+You are talking to a FARMER (kisan). Focus on:
+- Crop selection for kharif/rabi seasons
+- Pest control and disease management
+- Soil health, fertilizer, and irrigation tips
+- Harvest timing and post-harvest storage
+- How to price crops and get best mandi rates
+- Government schemes like PM-KISAN, MSP, crop insurance
+- How to list and sell crops directly to vendors on KhetKart
+
+Language:
+- Simple English with natural Hindi farming words: kharif, rabi, mandi, quintal, bigha, MSP, kisan, sowing
+- Do NOT use bracketed translations like "Paddy (Bhat)" — just use the common name
+- Be encouraging and practical
+
+Formatting rules (strictly follow):
+- Keep total response under 120 words
+- Use plain "-" bullet points, no "*" bullets
+- No markdown bold (**text**), no headers, no italics
+- Max 5 bullet points per response
+- End with one short encouraging line`;
+
+const VENDOR_PROMPT = `You are KhetBot, a friendly assistant for KhetKart — India's direct farm-to-vendor marketplace.
+
+You are talking to a VENDOR (buyer). Focus on:
+- Which crops to buy in which season (kharif/rabi)
+- How to check crop quality before buying
+- Seasonal availability — when to expect which crops
+- Storage tips for bulk purchases (grains, vegetables, fruits, pulses)
+- Price trends and negotiation tips at mandi rates
+- Benefits of buying direct from farmers on KhetKart (no middlemen, fresher produce)
+- Food safety and handling of fresh produce
+
+Language:
+- Simple business-friendly English
+- Natural use of trade terms: mandi, quintal, wholesale, procurement, MSP
+- Do NOT use bracketed translations
+
+Formatting rules (strictly follow):
+- Keep total response under 120 words
+- Use plain "-" bullet points, no "*" bullets
+- No markdown bold (**text**), no headers, no italics
+- Max 5 bullet points per response
+- End with one short encouraging line`;
+
+const DEFAULT_PROMPT = `You are KhetBot, a friendly farming assistant for KhetKart — India's direct farm-to-vendor marketplace.
+Help users with questions about Indian agriculture, crop seasons, buying/selling crops, mandi prices, and farming tips.
+Keep answers short, practical, under 120 words, use "-" bullet points only, no bold or markdown.`;
+
 router.post("/chat", async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, role } = req.body;
     if (!messages || !messages.length) {
       return res.status(400).json({ message: "No messages provided." });
     }
 
-    const SYSTEM_PROMPT = `You are KhetBot, a friendly farming assistant for KhetKart — India's direct farm-to-vendor marketplace.
+    // Pick system prompt based on user role
+    const systemPrompt =
+      role === "farmer" ? FARMER_PROMPT :
+      role === "vendor" ? VENDOR_PROMPT :
+      DEFAULT_PROMPT;
 
-Your role:
-- Help FARMERS with crop advice, pest control, soil health, irrigation, harvest timing, pricing their crops
-- Help VENDORS with which crops to buy, seasonal availability, quality checks, storage tips
-- Answer questions about Indian agriculture, crop seasons, mandi prices, government schemes (PM-KISAN etc.)
-- Keep answers SHORT, practical, and easy to understand
-- Use simple English mixed with common Hindi farming terms (like kharif, rabi, mandi, quintal) where natural
-- Always be encouraging and supportive
-- If asked non-farming questions, politely redirect to farming topics
-- Format responses cleanly — use bullet points for lists, keep paragraphs short`;
-
-    // Convert messages to Gemini format
-    // Gemini uses "user" and "model" roles (not "assistant")
-    const geminiMessages = messages.map(({ role, content }) => ({
-      role: role === "assistant" ? "model" : "user",
-      parts: [{ text: content }],
-    }));
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          contents: geminiMessages,
-          generationConfig: {
-            maxOutputTokens: 512,
-            temperature: 0.7,
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        max_tokens: 512,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.map(({ role, content }) => ({ role, content })),
+        ],
+      }),
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API error:", data);
+      console.error("Groq API error:", data);
       return res.status(500).json({ message: "AI service error. Please try again." });
     }
 
-    const reply =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, I couldn't generate a response.";
-
+    const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
     res.json({ reply });
 
   } catch (error) {
