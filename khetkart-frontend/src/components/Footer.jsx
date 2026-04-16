@@ -124,7 +124,7 @@ function Footer() {
             </li>
             <li className="flex items-center gap-2">
               <MdPhone className="text-green-400 shrink-0" size={16} />
-              <a href="tel:+911234567890" className="hover:text-yellow-400 transition">+91 1234567890</a>
+              <a href="#" className="hover:text-yellow-400 transition">+91 1234567890</a>
             </li>
             <li className="flex items-start gap-2">
               <MdLocationOn className="text-green-400 shrink-0 mt-0.5" size={16} />
