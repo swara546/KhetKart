@@ -2,7 +2,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { MdShoppingCart, MdDashboard, MdHistory } from "react-icons/md";
+import { MdShoppingCart, MdDashboard, MdHistory, MdPerson } from "react-icons/md";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -25,6 +25,11 @@ function Navbar() {
       isActive
         ? "border-yellow-400 text-yellow-400"
         : "text-white border-transparent"
+    }`;
+
+  const mobileLinkClass = ({ isActive }) =>
+    `block text-sm font-medium px-3 py-2 rounded-lg transition ${
+      isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"
     }`;
 
   return (
@@ -82,6 +87,10 @@ function Navbar() {
           {/* Auth */}
           {user ? (
             <li className="flex items-center gap-3 ml-2">
+              {/* ✅ Profile link */}
+              <NavLink to="/profile" className={linkClass}>
+                <MdPerson size={16} /> Profile
+              </NavLink>
               <span className="text-sm text-green-200">
                 {user.role === "farmer" ? "🧑‍🌾" : "🏪"} {user.name?.split(" ")[0]}
                 <span className={`ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-md ${
@@ -120,6 +129,10 @@ function Navbar() {
           {user?.role === "farmer" && (
             <NavLink to="/seller-dashboard"><MdDashboard size={24} /></NavLink>
           )}
+          {/* ✅ Profile icon in mobile top bar */}
+          {user && (
+            <NavLink to="/profile"><MdPerson size={24} /></NavLink>
+          )}
           <button onClick={() => setMenuOpen((o) => !o)}
             className="flex flex-col gap-1.5 p-1 focus:outline-none" aria-label="Toggle menu">
             <span className={`block h-0.5 w-6 bg-white transition-transform duration-300 ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
@@ -132,33 +145,34 @@ function Navbar() {
       {/* Mobile dropdown */}
       {menuOpen && (
         <div className="md:hidden mt-4 pb-4 border-t border-green-700 space-y-2 pt-4">
-          <NavLink to="/" onClick={() => setMenuOpen(false)}
-            className={({ isActive }) => `block text-sm font-medium px-3 py-2 rounded-lg transition ${isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"}`}>
+          <NavLink to="/" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
             Home
           </NavLink>
-          <NavLink to="/products" onClick={() => setMenuOpen(false)}
-            className={({ isActive }) => `block text-sm font-medium px-3 py-2 rounded-lg transition ${isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"}`}>
+          <NavLink to="/products" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
             {user?.role === "farmer" ? "Browse Market" : "Products"}
           </NavLink>
           {user?.role === "farmer" && (
-            <NavLink to="/seller-dashboard" onClick={() => setMenuOpen(false)}
-              className={({ isActive }) => `block text-sm font-medium px-3 py-2 rounded-lg transition ${isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"}`}>
+            <NavLink to="/seller-dashboard" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
               📋 My Dashboard
             </NavLink>
           )}
           {(!user || user?.role === "vendor") && (
             <>
-              <NavLink to="/cart" onClick={() => setMenuOpen(false)}
-                className={({ isActive }) => `block text-sm font-medium px-3 py-2 rounded-lg transition ${isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"}`}>
+              <NavLink to="/cart" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
                 🛒 Cart {cartCount > 0 && `(${cartCount})`}
               </NavLink>
               {user && (
-                <NavLink to="/orders" onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) => `block text-sm font-medium px-3 py-2 rounded-lg transition ${isActive ? "bg-white/10 text-yellow-400" : "text-white hover:bg-white/10"}`}>
+                <NavLink to="/orders" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
                   📦 My Orders
                 </NavLink>
               )}
             </>
+          )}
+          {/* ✅ Profile link in mobile dropdown */}
+          {user && (
+            <NavLink to="/profile" onClick={() => setMenuOpen(false)} className={mobileLinkClass}>
+              👤 My Profile
+            </NavLink>
           )}
           {user ? (
             <>

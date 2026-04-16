@@ -17,6 +17,7 @@ app.use("/api/products", require("./routes/products"));
 app.use("/api/orders", require("./routes/orders"));
 app.use("/api/farmer", require("./routes/farmer"));
 app.use("/api/ai", require("./routes/ai"));
+app.use('/api/profile', require('./routes/profile'));
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "✅ KhetKart backend is running!" });

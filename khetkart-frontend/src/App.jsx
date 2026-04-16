@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import FarmerDashboard from "./pages/FarmerDashboard";
 import OrderHistory from "./pages/OrderHistory";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -49,6 +50,15 @@ function App() {
             element={
               <ProtectedRoute role="farmer">
                 <FarmerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />
