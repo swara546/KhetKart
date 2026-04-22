@@ -7,15 +7,16 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  // Read initial state from localStorage
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("khetkart_user") || "null")
   );
 
   const login = (userData, token) => {
-    localStorage.setItem("khetkart_user",  JSON.stringify(userData));
+    // ✅ Always strip password before storing — safety net
+    const { password, __v, ...safeUser } = userData;
+    localStorage.setItem("khetkart_user", JSON.stringify(safeUser));
     localStorage.setItem("khetkart_token", token);
-    setUser(userData);
+    setUser(safeUser);
   };
 
   const logout = () => {
@@ -31,8 +32,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Custom hook — use this in any component instead of reading localStorage directly
-// Usage: const { user, login, logout } = useAuth();
 export function useAuth() {
   return useContext(AuthContext);
 }

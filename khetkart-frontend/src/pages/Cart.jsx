@@ -10,10 +10,10 @@ import {
   MdLocalShipping,
   MdCheckCircle,
   MdLock,
+  MdWarning,
 } from "react-icons/md";
 import { FiMinus, FiPlus } from "react-icons/fi";
 
-// ── Helpers ──────────────────────────────────────────────────────
 function getCart() {
   return JSON.parse(localStorage.getItem("khetkart_cart") || "[]");
 }
@@ -25,11 +25,11 @@ const DELIVERY_FEE = 49;
 const FREE_DELIVERY_ABOVE = 500;
 
 function categoryEmoji(cat) {
-  const map = { Grains: "🌾", Vegetables: "🥦", Fruits: "🍎", Pulses: "🫘" };
-  return map[cat] || "🌿";
+  return (
+    { Grains: "🌾", Vegetables: "🥦", Fruits: "🍎", Pulses: "🫘" }[cat] || "🌿"
+  );
 }
 
-// ── Not Logged In Screen ─────────────────────────────────────────
 function LoginRequired() {
   return (
     <div className="flex flex-col items-center justify-center py-28 text-center px-4">
@@ -64,7 +64,6 @@ function LoginRequired() {
   );
 }
 
-// ── Empty Cart Screen ────────────────────────────────────────────
 function EmptyCart() {
   return (
     <div className="flex flex-col items-center justify-center py-28 text-center px-4">
@@ -85,7 +84,6 @@ function EmptyCart() {
   );
 }
 
-// ── Order Placed Modal ───────────────────────────────────────────
 function OrderPlacedModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -95,7 +93,8 @@ function OrderPlacedModal({ onClose }) {
           Order Placed! 🎉
         </h2>
         <p className="text-gray-500 text-sm mb-6">
-          Your order has been sent directly to the farmer. <br />
+          Your order has been sent directly to the farmer.
+          <br />
           They will contact you shortly to arrange delivery. 🌾
         </p>
         <button
@@ -109,11 +108,11 @@ function OrderPlacedModal({ onClose }) {
   );
 }
 
-// ── Cart Item Row ────────────────────────────────────────────────
 function CartItem({ item, onQtyChange, onRemove }) {
+  const step = item.minOrder || 1; // step = minOrder
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-4 items-start">
-      {/* Thumbnail */}
       <div className="w-16 h-16 shrink-0 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center text-3xl">
         {item.image ? (
           <img
@@ -125,8 +124,6 @@ function CartItem({ item, onQtyChange, onRemove }) {
           <span>{categoryEmoji(item.category)}</span>
         )}
       </div>
-
-      {/* Details */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">
           {item.category}
@@ -137,14 +134,18 @@ function CartItem({ item, onQtyChange, onRemove }) {
         <p className="text-xs text-gray-400 mt-0.5">
           ₹{item.price} / {item.unit || "kg"} · by {item.sellerName || "Farmer"}
         </p>
+        {step > 1 && (
+          <p className="text-xs text-orange-500 mt-0.5">
+            Min order: {step} {item.unit || "kg"}
+          </p>
+        )}
 
         <div className="flex items-center justify-between mt-3">
-          {/* Qty controls */}
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => onQtyChange(item._id, item.qty - 1)}
+              onClick={() => onQtyChange(item._id, item.qty - step)}
+              disabled={item.qty <= step}
               className="px-3 py-1.5 text-green-700 hover:bg-green-50 transition disabled:opacity-30"
-              disabled={item.qty <= 1}
             >
               <FiMinus size={14} />
             </button>
@@ -152,13 +153,15 @@ function CartItem({ item, onQtyChange, onRemove }) {
               {item.qty} {item.unit || "kg"}
             </span>
             <button
-              onClick={() => onQtyChange(item._id, item.qty + 1)}
-              className="px-3 py-1.5 text-green-700 hover:bg-green-50 transition"
+              onClick={() => onQtyChange(item._id, item.qty + step)}
+              disabled={
+                item.stock !== undefined && item.qty + step > item.stock
+              }
+              className="px-3 py-1.5 text-green-700 hover:bg-green-50 transition disabled:opacity-30"
             >
               <FiPlus size={14} />
             </button>
           </div>
-
           <div className="flex items-center gap-3">
             <span className="font-extrabold text-green-800 text-sm">
               ₹{(item.price * item.qty).toLocaleString("en-IN")}
@@ -166,7 +169,6 @@ function CartItem({ item, onQtyChange, onRemove }) {
             <button
               onClick={() => onRemove(item._id)}
               className="text-red-400 hover:text-red-600 transition"
-              title="Remove"
             >
               <MdDelete size={20} />
             </button>
@@ -177,21 +179,21 @@ function CartItem({ item, onQtyChange, onRemove }) {
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────
 function Cart() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // ← check login state
+  const { user } = useAuth();
   const [cart, setCart] = useState(getCart);
   const [placing, setPlacing] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [error, setError] = useState("");
 
-  // ── Guard: not logged in ─────────────────────────────────────
   if (!user) return <LoginRequired />;
 
-  // ── Cart operations ──────────────────────────────────────────
   const updateQty = (id, newQty) => {
-    if (newQty < 1) return;
+    const item = cart.find((i) => i._id === id);
+    const step = item?.minOrder || 1;
+    if (newQty < step) return; // can't go below minOrder
+    if (item?.stock !== undefined && newQty > item.stock) return; // can't exceed stock
     const updated = cart.map((i) => (i._id === id ? { ...i, qty: newQty } : i));
     setCart(updated);
     saveCart(updated);
@@ -208,14 +210,26 @@ function Cart() {
     saveCart([]);
   };
 
-  // ── Totals ───────────────────────────────────────────────────
+  // Check if any item is below minOrder
+  const hasMinOrderViolation = cart.some((i) => i.qty < (i.minOrder || 1));
+
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const delivery = subtotal >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
   const total = subtotal + delivery;
   const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
 
-  // ── Place Order ──────────────────────────────────────────────
   const handlePlaceOrder = async () => {
+    // Client-side minOrder check before hitting backend
+    for (const item of cart) {
+      if (item.minOrder && item.qty < item.minOrder) {
+        setError(
+          `Minimum order for "${item.name}" is ${item.minOrder} ${
+            item.unit || "kg"
+          }.`
+        );
+        return;
+      }
+    }
     setPlacing(true);
     setError("");
     try {
@@ -251,7 +265,6 @@ function Cart() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-gradient-to-r from-green-800 to-emerald-700 text-white px-6 py-10">
         <div className="max-w-5xl mx-auto">
           <Link
@@ -269,9 +282,7 @@ function Cart() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Items */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Delivery nudge */}
           {subtotal < FREE_DELIVERY_ABOVE ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
               <MdLocalShipping className="text-yellow-500 shrink-0" size={20} />
@@ -292,10 +303,9 @@ function Cart() {
             </div>
           )}
 
-          {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+              <MdWarning size={16} /> {error}
             </div>
           )}
 
@@ -318,13 +328,11 @@ function Cart() {
           </div>
         </div>
 
-        {/* Right: Summary */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
             <h2 className="text-lg font-extrabold text-gray-800 mb-5">
               Order Summary
             </h2>
-
             <div className="space-y-3 text-sm text-gray-600 mb-4">
               <div className="flex justify-between">
                 <span>
@@ -358,10 +366,12 @@ function Cart() {
               </span>
             </div>
 
+            {/* Min order warning on button */}
+
             <button
               onClick={handlePlaceOrder}
               disabled={placing}
-              className="w-full bg-green-700 hover:bg-green-600 disabled:bg-green-300 text-white font-bold py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2"
+              className="w-full bg-green-700 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2"
             >
               {placing ? (
                 <>
@@ -398,7 +408,6 @@ function Cart() {
               🔒 Direct order to farmer — no middleman
             </p>
 
-            {/* Item breakdown */}
             <div className="mt-5 border-t border-gray-100 pt-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                 Items in order
