@@ -21,7 +21,7 @@ function saveCart(cart) {
   localStorage.setItem("khetkart_cart", JSON.stringify(cart));
 }
 
-const DELIVERY_FEE = 49;
+const DELIVERY_FEE = 10;
 const FREE_DELIVERY_ABOVE = 500;
 
 function categoryEmoji(cat) {
