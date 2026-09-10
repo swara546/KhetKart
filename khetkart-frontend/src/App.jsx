@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import KhetBot from "./components/KhetBot";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
@@ -64,7 +63,6 @@ function App() {
           />
         </Routes>
         <Footer />
-        <KhetBot />
       </AuthProvider>
     </BrowserRouter>
   );
