@@ -4,7 +4,6 @@ const instance = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Automatically attach JWT token to every request if logged in
 instance.interceptors.request.use((config) => {
     const token = localStorage.getItem("khetkart_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
