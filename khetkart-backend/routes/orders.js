@@ -7,7 +7,7 @@ const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
 const Product = require("../models/Product");
-const { protect, farmerOnly } = require("../middleware/auth");
+const { protect, farmerOnly,vendorOnly  } = require("../middleware/auth");
 
 const VALID_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
@@ -130,6 +130,67 @@ router.patch("/:id/status", protect, farmerOnly, async (req, res) => {
     res.json({ message: `Order marked as ${status}!`, order });
   } catch (error) {
     console.error("Status update error:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+// PATCH /api/orders/:id/cancel — vendor cancels their own order
+// Vendor can cancel only pending or confirmed orders.
+// Once shipped, cancellation is not allowed.
+router.patch("/:id/cancel", protect, vendorOnly, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    // Make sure this order belongs to the logged-in vendor
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "You can only cancel your own orders."
+      });
+    }
+
+    // Cannot cancel after shipping
+    if (!["pending", "confirmed"].includes(order.status)) {
+      return res.status(400).json({
+        message: "Order cannot be cancelled after it has been shipped."
+      });
+    }
+
+    const previousStatus = order.status;
+
+    // If farmer had already confirmed the order,
+    // stock was reduced, so restore it.
+    if (previousStatus === "confirmed") {
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(
+          item.productId,
+          { $inc: { stock: Number(item.qty) } },
+          { new: true }
+        );
+      }
+    }
+
+    order.status = "cancelled";
+    order.statusHistory = [
+      ...(order.statusHistory || []),
+      {
+        status: "cancelled",
+        updatedAt: new Date()
+      }
+    ];
+
+    await order.save();
+
+    res.json({
+      message: "Order cancelled successfully.",
+      order
+    });
+
+  } catch (error) {
+    console.error("Vendor cancel order error:", error);
     res.status(500).json({ message: "Server error." });
   }
 });

@@ -1,6 +1,3 @@
-// models/Order.js
-// Defines what an "Order" document looks like in MongoDB
-
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema(

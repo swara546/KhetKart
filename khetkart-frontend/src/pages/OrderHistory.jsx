@@ -65,7 +65,7 @@ function EmptyOrders() {
 }
 
 // ── Order Card ───────────────────────────────────────────────────
-function OrderCard({ order }) {
+function OrderCard({ order,onCancel }) {
   const [expanded, setExpanded] = useState(false);
   const status = statusConfig(order.status);
 
@@ -129,11 +129,22 @@ function OrderCard({ order }) {
       </div>
 
       {/* Footer */}
-      <div className="px-5 pb-4 flex items-center justify-between">
-        <div className="text-xs text-gray-400">
+      <div className="px-5 pb-4 flex items-center justify-between gap-4">
+
+          <div className="text-xs text-gray-400">
           {order.items.length} item{order.items.length !== 1 ? "s" : ""} ·
           Subtotal ₹{order.subtotal.toLocaleString("en-IN")}
         </div>
+
+        {/* Cancel button */}
+            {["pending", "confirmed"].includes(order.status) && (
+              <button
+                onClick={() => onCancel(order._id)}
+                className="text-xs font-semibold px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition"
+              >
+                Cancel Order
+              </button>
+            )}
 
         {/* Status timeline */}
         <div className="flex items-center gap-1">
@@ -186,6 +197,41 @@ function OrderHistory() {
   }, [user]);
 
   if (!user) return <LoginRequired />;
+
+  const handleCancelOrder = async (orderId) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to cancel this order?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await axios.patch(`/api/orders/${orderId}/cancel`);
+
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order._id === orderId
+          ? {
+              ...order,
+              status: "cancelled",
+              statusHistory: [
+                ...(order.statusHistory || []),
+                {
+                  status: "cancelled",
+                  updatedAt: new Date()
+                }
+              ]
+            }
+          : order
+      )
+    );
+  } catch (error) {
+    alert(
+      error.response?.data?.message ||
+      "Failed to cancel order. Please try again."
+    );
+  }
+};
 
   const STATUS_FILTERS = [
     { value: "all",       label: "All Orders" },
@@ -294,7 +340,11 @@ function OrderHistory() {
         ) : (
           <div className="space-y-4">
             {filtered.map((order) => (
-              <OrderCard key={order._id} order={order} />
+              <OrderCard
+                key={order._id}
+                order={order}
+                onCancel={handleCancelOrder}
+              />
             ))}
           </div>
         )}
