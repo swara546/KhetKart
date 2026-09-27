@@ -141,7 +141,7 @@ function ProductCard({ product, onView, onAddToCart }) {
             className="flex items-center gap-1.5 bg-green-700 hover:bg-green-600 disabled:bg-gray-300 text-white text-xs font-bold px-3 py-2 rounded-lg transition"
           >
             <MdShoppingCart size={14} />{" "}
-            {product.stock === 0 ? "Out of Stock" : "Order"}
+            {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
           </button>
         </div>
       </div>
@@ -252,7 +252,7 @@ function ProductModal({ product, onClose, onAddToCart }) {
               className="flex items-center gap-2 bg-green-700 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold px-5 py-2.5 rounded-xl transition"
             >
               <MdShoppingCart size={18} />{" "}
-              {product.stock === 0 ? "Out of Stock" : "Place Order"}
+              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
             </button>
           </div>
         </div>
@@ -302,7 +302,7 @@ function Products() {
   const handleAddToCart = (product) => {
     saveToCart(product);
     const minQty = product.minOrder || 1;
-    setToast(`${product.name} added! (${minQty} ${product.unit || "kg"})`);
+    setToast(`Added to cart: ${product.name} (${minQty} ${product.unit || "kg"}) — go to Cart to place the order`);
     setTimeout(() => setToast(""), 2500);
   };
 

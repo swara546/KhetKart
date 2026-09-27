@@ -22,16 +22,9 @@ router.get("/products", async (req, res) => {
 // GET /api/farmer/orders — orders placed for this farmer's crops
 router.get("/orders", async (req, res) => {
   try {
-    const myProducts   = await Product.find({ seller: req.user._id }).select("_id");
-    const myProductIds = myProducts.map((p) => p._id.toString());
-
-    const allOrders = await Order.find()
+    const myOrders = await Order.find({ farmer: req.user._id })
       .populate("customer", "name mobile village")
       .sort({ createdAt: -1 });
-
-    const myOrders = allOrders.filter((order) =>
-      order.items.some((item) => myProductIds.includes(item.productId?.toString()))
-    );
 
     res.status(200).json(myOrders);
   } catch {

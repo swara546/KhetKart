@@ -84,7 +84,7 @@ function EmptyCart() {
   );
 }
 
-function OrderPlacedModal({ onClose }) {
+function OrderPlacedModal({ onClose, orderCount = 1 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
@@ -93,7 +93,14 @@ function OrderPlacedModal({ onClose }) {
           Order Placed! 🎉
         </h2>
         <p className="text-gray-500 text-sm mb-6">
-          Your order has been sent directly to the farmer.
+          {orderCount > 1 ? (
+            <>
+              Your cart had items from {orderCount} different farmers, so it
+              was split into {orderCount} separate orders — one per farmer.
+            </>
+          ) : (
+            <>Your order has been sent directly to the farmer.</>
+          )}
           <br />
           They will contact you shortly to arrange delivery. 🌾
         </p>
@@ -186,6 +193,7 @@ function Cart() {
   const [placing, setPlacing] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [error, setError] = useState("");
+  const [orderCount, setOrderCount] = useState(1);
 
   if (!user) return <LoginRequired />;
 
@@ -233,20 +241,19 @@ function Cart() {
     setPlacing(true);
     setError("");
     try {
-      await axios.post("/api/orders", {
-        items: cart.map(({ _id, qty, price, name, unit }) => ({
-          productId: _id,
-          qty,
-          price,
-          name,
-          unit,
-        })),
-        subtotal,
-        delivery,
-        total,
-      });
-      setOrdered(true);
-      clearCart();
+      const res = await axios.post("/api/orders", {
+          items: cart.map(({ _id, qty, price, name, unit }) => ({
+            productId: _id,
+            qty,
+            price,
+            name,
+            unit,
+          })),
+          delivery,
+        });
+        setOrderCount(res.data?.orders?.length || 1);
+        setOrdered(true);
+        clearCart();
     } catch (err) {
       setError(
         err.response?.data?.message || "Order failed. Please try again."
@@ -433,7 +440,9 @@ function Cart() {
         </div>
       </div>
 
-      {ordered && <OrderPlacedModal onClose={handleOrderClose} />}
+      {ordered && (
+        <OrderPlacedModal onClose={handleOrderClose} orderCount={orderCount} />
+      )}
     </div>
   );
 }

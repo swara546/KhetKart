@@ -15,11 +15,13 @@ const VALID_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancell
 // Stock is NOT reduced here — only when farmer confirms
 router.post("/", protect, async (req, res) => {
   try {
-    const { items, subtotal, delivery, total } = req.body;
+    const { items, delivery = 0 } = req.body;
     if (!items || items.length === 0)
       return res.status(400).json({ message: "No items in order." });
 
-    // Validate minOrder + check stock availability (but don't reduce yet)
+    // sellerId (string) -> { items: [...], subtotal }
+    const groups = new Map();
+
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product)
@@ -36,17 +38,48 @@ router.post("/", protect, async (req, res) => {
         return res.status(400).json({
           message: `Only ${product.stock} ${product.unit || "kg"} of "${product.name}" available.`,
         });
+
+      const sellerId = product.seller.toString();
+      if (!groups.has(sellerId)) groups.set(sellerId, { items: [], subtotal: 0 });
+
+      const group = groups.get(sellerId);
+      // Price taken from the DB, not trusted from the client.
+      group.items.push({
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        qty: orderedQty,
+        unit: product.unit,
+      });
+      group.subtotal += Number(product.price) * orderedQty;
     }
 
-    // Create order with pending status — stock unchanged
-    const order = await Order.create({
-      customer: req.user._id,
-      items, subtotal, delivery, total,
-      status: "pending",
-      statusHistory: [{ status: "pending", updatedAt: new Date() }],
-    });
+    const sellerIds = [...groups.keys()];
+    const deliveryPerOrder = sellerIds.length > 0 ? Number(delivery) / sellerIds.length : 0;
 
-    res.status(201).json({ message: "Order placed successfully! 🎉", order });
+    const createdOrders = [];
+    for (const sellerId of sellerIds) {
+      const group = groups.get(sellerId);
+      const order = await Order.create({
+        customer: req.user._id,
+        farmer: sellerId,
+        items: group.items,
+        subtotal: group.subtotal,
+        delivery: deliveryPerOrder,
+        total: group.subtotal + deliveryPerOrder,
+        status: "pending",
+        statusHistory: [{ status: "pending", updatedAt: new Date() }],
+      });
+      createdOrders.push(order);
+    }
+
+    res.status(201).json({
+      message:
+        createdOrders.length > 1
+          ? `Order placed! Split into ${createdOrders.length} orders — one per farmer. 🎉`
+          : "Order placed successfully! 🎉",
+      orders: createdOrders,
+    });
   } catch (error) {
     console.error("Place order error:", error);
     res.status(500).json({ message: "Server error." });
@@ -86,13 +119,13 @@ router.patch("/:id/status", protect, farmerOnly, async (req, res) => {
     if (!order) return res.status(404).json({ message: "Order not found." });
 
     // Verify farmer owns a product in this order
-    const myProducts = await Product.find({ seller: req.user._id }).select("_id");
-    const myProductIds = myProducts.map((p) => p._id.toString());
-    const belongs = order.items.some((item) =>
-      myProductIds.includes(item.productId?.toString())
-    );
-    if (!belongs)
-      return res.status(403).json({ message: "You can only update orders for your own crops." });
+      const myProducts = await Product.find({ seller: req.user._id }).select("_id");
+      const myProductIds = myProducts.map((p) => p._id.toString());
+      const belongs = order.items.some((item) =>
+        myProductIds.includes(item.productId?.toString())
+      );
+     if (order.farmer.toString() !== req.user._id.toString())
+    return res.status(403).json({ message: "You can only update orders for your own crops." });
 
     const previousStatus = order.status;
 
